@@ -11,7 +11,7 @@ function slugify(value: string) {
 }
 
 function proxiedManifestUrl(manifestId: string) {
-  return `https://corsproxy.io/?url=${encodeURIComponent(manifestId)}`;
+  return `/api/proxy?url=${encodeURIComponent(manifestId)}`;
 }
 
 export function MiradorViewer({ manifestId, title }: MiradorViewerProps) {

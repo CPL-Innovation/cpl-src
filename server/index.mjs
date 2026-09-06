@@ -206,6 +206,28 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    if (request.method === 'GET' && url.pathname === '/api/proxy') {
+      const targetUrl = url.searchParams.get('url');
+      if (!targetUrl) {
+        return sendJson(response, 400, { error: 'url parameter is required' });
+      }
+      try {
+        const proxyResponse = await fetch(targetUrl);
+        const contentType = proxyResponse.headers.get('content-type') || 'application/json';
+        const body = await proxyResponse.text();
+        response.writeHead(proxyResponse.status, {
+          'Content-Type': contentType,
+          'Content-Length': Buffer.byteLength(body),
+          'Access-Control-Allow-Origin': '*',
+        });
+        response.end(body);
+      } catch (error) {
+        console.error(`Proxy error for ${targetUrl}:`, error);
+        sendJson(response, 502, { error: 'Failed to fetch the requested URL' });
+      }
+      return;
+    }
+
     sendJson(response, 404, { error: 'Not found' });
   } catch (error) {
     console.error(error);
