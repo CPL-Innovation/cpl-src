@@ -2,7 +2,7 @@
 
 ## Architecture
 
-The application uses SQLite as its single catalog source of truth. The Node service in `server/index.mjs` reads `data/catalog.sqlite`, which contains the image and interview metadata plus transcript text. Existing database rows are not overwritten on startup, so transcript edits persist.
+The application uses SQLite as its single catalog source of truth. The API logic lives in `server/app.mjs` and talks to the database through `@libsql/client`. Locally it reads `data/catalog.sqlite`, which contains the image and interview metadata plus transcript text. In production on Vercel it runs as a serverless function (`api/index.mjs`) against a hosted [Turso](https://turso.tech) database, which is SQLite-compatible. Existing database rows are not overwritten on startup, so transcript edits persist.
 
 The Vite React app and catalog editor read records from `GET /api/items`. The admin app creates records with `POST /api/items` and saves metadata and transcript edits with `PATCH /api/items/:id`. Vite proxies `/api` requests to the API server during development.
 
@@ -13,7 +13,7 @@ The database has two tables:
 
 ## Requirements
 
-- Node.js 22 or newer. The service uses the built-in `node:sqlite` module.
+- Node.js 20 or newer.
 - npm.
 
 ## Full-stack development
@@ -48,7 +48,29 @@ Build the frontend with:
 npm run build
 ```
 
-The build output is written to `dist/`. The SQLite API still needs to run separately with `npm run server`; deploy the `dist/` directory to a static host and configure `VITE_API_URL` to point at the deployed API before building.
+The build output is written to `dist/`.
+
+## Deploy to Vercel
+
+Vercel serves the built site and runs the API as a serverless function. `vercel.json` rewrites every `/api/*` request to `api/index.mjs`. Vercel's file system is read-only, so the catalog lives in a hosted Turso database instead of `data/catalog.sqlite`.
+
+1. Create a Turso database and an auth token, either in the Turso dashboard or with the CLI:
+
+   ```bash
+   turso db create cpl-catalog
+   turso db show cpl-catalog --url
+   turso db tokens create cpl-catalog
+   ```
+
+2. Copy the local catalog into it. The script creates the tables and skips rows that already exist, so it is safe to re-run:
+
+   ```bash
+   TURSO_DATABASE_URL=libsql://... TURSO_AUTH_TOKEN=... npm run seed:turso
+   ```
+
+3. In the Vercel project settings, add the environment variables `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`, then redeploy. Leave `VITE_API_URL` unset: the site and the API share a domain.
+
+Once deployed, edits made in `/admin` are saved to Turso, not to `data/catalog.sqlite`. Set the same two environment variables locally to run `npm run server` against the hosted database.
 
 ## Generate an SRT transcript
 

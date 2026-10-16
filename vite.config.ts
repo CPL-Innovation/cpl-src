@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { fileURLToPath } from 'node:url';
 
 const mainEntry = new URL('./index.html', import.meta.url);
 const adminEntry = new URL('./admin/index.html', import.meta.url);
@@ -28,8 +29,8 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        main: mainEntry.pathname,
-        admin: adminEntry.pathname,
+        main: fileURLToPath(mainEntry),
+        admin: fileURLToPath(adminEntry),
       },
     },
   },
